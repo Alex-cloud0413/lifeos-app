@@ -1,0 +1,10 @@
+// Public defaults support the local Preview build. Use your own identifiers for iCloud.
+LIFEOS_TEAM_ID =
+LIFEOS_BUNDLE_ID = com.example.LifeOS
+LIFEOS_CLOUD_CONTAINER = iCloud.$(LIFEOS_BUNDLE_ID)
+LIFEOS_APP_GROUP = group.$(LIFEOS_BUNDLE_ID)
+LIFEOS_URL_SCHEME = lifeos
+
+#include? "Local.xcconfig"
+
+DEVELOPMENT_TEAM = $(LIFEOS_TEAM_ID)

@@ -1,0 +1,36 @@
+# Credentials, signing and local configuration
+.env
+.env.*
+!.env.example
+Config/Local.xcconfig
+Local.xcconfig
+*.pem
+*.key
+*.p12
+*.p8
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.xcuserstate
+xcuserdata/
+
+# Rebuildable artifacts
+.build/
+build/
+DerivedData/
+*.app/
+*.dSYM/
+*.ipa
+*.dmg
+*.zip
+*.log
+.DS_Store
+__pycache__/
+*.pyc
+
+# Private user data and local verification
+*.sqlite*
+*.store*
+exports/
+backups/
+private/

@@ -1,0 +1,6 @@
+// Copy to Local.xcconfig (ignored by Git) and replace these values.
+LIFEOS_TEAM_ID = YOUR_TEAM_ID
+LIFEOS_BUNDLE_ID = com.yourname.LifeOS
+LIFEOS_CLOUD_CONTAINER = iCloud.com.yourname.LifeOS
+LIFEOS_APP_GROUP = group.com.yourname.LifeOS
+LIFEOS_URL_SCHEME = lifeos
