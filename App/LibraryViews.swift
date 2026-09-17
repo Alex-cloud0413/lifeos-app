@@ -43,7 +43,15 @@ struct FilterEditor: View {
                 TextField("筛选名称", text: $title)
                 Picker("条件关系", selection: $filter.matchAny) { Text("满足全部条件（AND）").tag(false); Text("满足任一条件（OR）").tag(true) }
                 Picker("内容", selection: $filter.itemType) { Text("任务").tag("task"); Text("笔记").tag("note"); Text("任务与笔记").tag("all") }
-                Picker("时间范围", selection: $filter.view) { Text("全部").tag("all"); Text("今天及逾期").tag("today"); Text("未来七天及逾期").tag("upcoming"); Text("未排期").tag("undated") }
+                Picker("时间范围", selection: $filter.view) {
+                    Text("全部").tag("all")
+                    Text("今天及逾期").tag("today")
+                    Text("未来 7 天").tag("next7days")
+                    Text("本月").tag("month")
+                    Text("本季度").tag("quarter")
+                    if filter.view == "upcoming" { Text("未来 7 天及逾期").tag("upcoming") }
+                    Text("未排期").tag("undated")
+                }
                 Section("纳入条件") {
                     DisclosureGroup("来自专项 · \(filter.listIDs.count) 个") { listToggles(excluding: false) }
                     TextField("包含标签，用逗号分隔", text: $tags)

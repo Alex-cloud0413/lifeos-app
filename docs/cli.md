@@ -1,4 +1,4 @@
-# Life · OS CLI 与本地 Agent（0.6.0）
+# Life · OS CLI 与本地 Agent（0.7.0）
 
 `lifeos` 通过当前用户专属的 Unix socket 读写运行中的 Mac App；不会直接修改数据库，也不监听互联网端口。连接目录权限 0700、socket 0600，双方核对用户身份。在「设置 → 本地 Agent」启用后可用。自定义签名版本先设置 `LIFEOS_BUNDLE_ID`，或使用 `--socket PATH` / `LIFEOS_SOCKET`；详见 [构建说明](building.md)。
 
@@ -17,6 +17,10 @@ lifeos new-project 产品迭代 --direction DIRECTION_ID
 lifeos update-project PROJECT_ID --direction DIRECTION_ID
 lifeos tasks --direction DIRECTION_ID
 lifeos tasks --view notes
+lifeos tasks --view today
+lifeos tasks --view next7days
+lifeos tasks --view month
+lifeos tasks --view quarter
 lifeos tasks --project PROJECT_ID --search 周报
 lifeos add "写周报" --project PROJECT_ID --due "2026-09-14 09:00" --priority 3 --tags 工作 --repeat weekly
 lifeos add "研究笔记" --type note --notes "正文"
@@ -42,6 +46,8 @@ lifeos undo EVENT_ID
 标题原样保存，没有日期、时间、标签或优先级的自然语言识别。`--priority` 为 0 无、1 低、2 中、3 高。日期参数接受 `YYYY-MM-DD`、`YYYY-MM-DD HH:mm`（Mac 时区）或带时区的 ISO 8601。`--due none` 清除日期时，应同时清除结束时间及重复规则。笔记不能设置日期或重复；改变类型用 `convert`。
 
 所有响应为 JSON。成功退出码 0，错误退出码 1，返回 `ok:false`、`errorCode` 和原因。任务 ID 需完整使用。
+
+时间视图按任务自身的排期日期和设备当地时区筛选：`today` 包括今天及逾期未完成事项；`next7days` 从今天起共 7 个日历日；`month` 从今天到本自然月月底；`quarter` 从今天到本自然季度末（1–3、4–6、7–9、10–12 月）。结束边界不包含次日零点，不采用滚动 30/90 天。后三种视图排除今天之前的日期；没有排期的任务不出现。默认不含已完成、回收站、归档专项或笔记。App 中未命中日期的父任务仅作为淡显的层级上下文，不代表父任务也在该时间范围内。旧 `upcoming` 筛选保留原先包含逾期的行为。
 
 ## 方向与专项
 

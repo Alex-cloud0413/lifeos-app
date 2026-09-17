@@ -195,7 +195,9 @@ public struct Projection: Sendable {
     }
     public func children(of id: String) -> [Record] { tasks.filter { $0.parentID == id && !isHidden($0) } }
     public func query(_ filter: TaskFilter, now: Date = Date(), calendar: Calendar = .current) -> [Record] {
-        tasks.filter { task in
+        let timeScope = TaskTimeScope(rawValue: filter.view)
+        let timeInterval = timeScope?.interval(now: now, calendar: calendar)
+        return tasks.filter { task in
             guard !isPurged(task) else { return false }
             if let direction = filter.directionID, records[task.listID]?.directionID != direction { return false }
             guard filter.matchesConditions(task) else { return false }
@@ -209,8 +211,8 @@ public struct Projection: Sendable {
             guard filter.includeCompleted || !task.completed else { return false }
             if let list = records[task.listID], list.archived && filter.listID != list.id { return false }
             let today = calendar.startOfDay(for: now)
-            if filter.view == "today" {
-                guard let due = task.due, due < calendar.date(byAdding: .day, value: 1, to: today)! else { return false }
+            if let timeScope, let timeInterval {
+                guard let due = task.due, timeScope.includes(due, in: timeInterval) else { return false }
             } else if filter.view == "upcoming" {
                 guard let due = task.due, due < calendar.date(byAdding: .day, value: 7, to: today)! else { return false }
             } else if filter.view == "tomorrow" {

@@ -22,6 +22,8 @@ struct RootView: View {
     @State private var selecting = false
     @State private var selection: Set<String> = []
     @State private var showSettings = false
+    @State private var showScheduledTask = false
+    @State private var queryDate = Date()
     @State private var trashSnapshot: [Record]?
     @State private var showDirectionSheet = false
     @State private var editingDirection: Record?
@@ -34,8 +36,9 @@ struct RootView: View {
     @FocusState private var quickFocused: Bool
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     private var currentRoute: String { pageRoute ?? route ?? "inbox" }
-    private var sort: String { store.projection.records["view:" + currentRoute]?["sort"].string ?? "manual" }
-    private var grouping: String { store.projection.records["view:" + currentRoute]?["group"].string ?? "none" }
+    private var timeScope: TaskTimeScope? { TaskTimeScope(rawValue: currentRoute) }
+    private var sort: String { store.projection.records["view:" + currentRoute]?["sort"].string ?? (timeScope == nil ? "manual" : "date") }
+    private var grouping: String { store.projection.records["view:" + currentRoute]?["group"].string ?? (timeScope == nil ? "none" : "list") }
     private var toolRoute: Bool { ["templates", "history"].contains(currentRoute) || currentRoute.hasPrefix("direction:") }
     private var spacious: Bool { currentRoute == "calendar" || toolRoute || mode == "board" }
     private var currentList: String? { currentRoute.hasPrefix("list:") ? currentRoute : nil }
@@ -47,13 +50,14 @@ struct RootView: View {
         if r == "notes" { f.itemType = "note" }
         if r.hasPrefix("tag:") { f.view = "all"; f.tag = String(r.dropFirst(4)); f.itemType = "all" }
         if r.hasPrefix("filter:"), let data = store.projection.records[r]?["query"].string?.data(using: .utf8), let saved = try? JSONDecoder().decode(TaskFilter.self, from: data) { f = saved; if !search.isEmpty { f.search = search } }
-        if mode == "board" && r != "calendar" { f.includeCompleted = true }
+        if mode == "board" && r != "calendar" && timeScope == nil { f.includeCompleted = true }
         return f
     }
-    private var tasks: [Record] { TaskOrdering.sorted(store.projection.query(filter), by: sort) }
+    private var tasks: [Record] { TaskOrdering.sorted(store.projection.query(filter, now: queryDate), by: sort) }
     private var outline: TaskOutline { TaskOutline(matching: tasks, records: store.projection.records, sort: sort) }
     private var visibleRows: [TaskOutline.Row] { outline.rows(collapsed: search.isEmpty ? collapsedTasks : []) }
     private var title: String {
+        if let timeScope { return timeScope.title }
         if let record = store.projection.records[currentRoute] {
             if currentList != nil {
                 let direction = store.projection.records[record.directionID ?? ""]?.title ?? "待归类专项"
@@ -72,6 +76,9 @@ struct RootView: View {
             .alert("操作未完成", isPresented: Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })) { Button("好") { store.errorMessage = nil } } message: { Text(store.errorMessage ?? "") }
             .sheet(item: $subtaskParent) { parent in SubtaskComposer(parent: parent, onCreated: openTask).environment(store) }
             .sheet(isPresented: $showSettings) { SettingsView().environment(store) }
+            .sheet(isPresented: $showScheduledTask) {
+                ScheduledTaskComposer(date: queryDate, onCreated: { selectedTask = $0 }).environment(store)
+            }
             .confirmationDialog("清空回收站？", isPresented: Binding(get: { trashSnapshot != nil }, set: { if !$0 { trashSnapshot = nil } }), titleVisibility: .visible) {
                 Button("清空回收站", role: .destructive) {
                     guard let snapshot = trashSnapshot else { return }
@@ -101,16 +108,21 @@ struct RootView: View {
             .onOpenURL { if pageRoute == nil, let id = TaskLink.id(from: $0) { openTask(id) } }
             .onChange(of: search) { _, value in if !value.isEmpty && toolRoute { route = "all" } }
             .onChange(of: route) { _, _ in
-                selectedTask = nil; selecting = false; selection.removeAll()
+                selectedTask = nil; selecting = false; selection.removeAll(); queryDate = Date()
             }
             #if os(iOS)
             .onChange(of: selectedTask) { _, id in
                 if let id { openTask(id); selectedTask = nil }
             }
             #endif
-            .onChange(of: scenePhase) { _, phase in if pageRoute == nil && phase == .active {
-                do { try store.reload() } catch { store.errorMessage = error.localizedDescription }
-                store.consumeSharedInbox()
+            .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in queryDate = Date() }
+            .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in queryDate = Date() }
+            .onChange(of: scenePhase) { _, phase in if phase == .active {
+                queryDate = Date()
+                if pageRoute == nil {
+                    do { try store.reload() } catch { store.errorMessage = error.localizedDescription }
+                    store.consumeSharedInbox()
+                }
             } }
             .onAppear { if pageRoute == nil { store.consumeSharedInbox() } }
     }
@@ -204,6 +216,9 @@ struct RootView: View {
                 let unassigned = store.projection.lists.filter { !$0.archived && (store.projection.records[$0.directionID ?? ""]?.kind != "direction" || store.projection.records[$0.directionID ?? ""]?.trashed == true) }
                 if !unassigned.isEmpty { Section("待归类专项") { ForEach(unassigned) { listRow($0) } } }
                 if store.projection.lists.contains(where: \.archived) { Section("已归档专项") { ForEach(store.projection.lists.filter(\.archived)) { listRow($0) } } }
+                Section("时间") {
+                    ForEach(TaskTimeScope.allCases) { scope in nav(scope.title, scope.symbol, scope.rawValue) }
+                }
                 Section("辅助视图") {
                     nav("全部任务", "tray.full", "all"); nav("日历", "calendar", "calendar")
                     nav("笔记", "note.text", "notes"); nav("模板", "square.on.square", "templates")
@@ -309,7 +324,9 @@ struct RootView: View {
         }
     }
     private func beginAdding() {
-        if let id = currentList, let project = store.projection.records[id] {
+        if timeScope != nil {
+            showScheduledTask = true
+        } else if let id = currentList, let project = store.projection.records[id] {
             taskDraft = ProjectTaskDraft(project: project)
         } else {
             if toolRoute || ["trash", "completed"].contains(currentRoute) { route = "inbox" }
@@ -329,7 +346,10 @@ struct RootView: View {
         else if currentRoute == "history" { HistoryView() }
         else {
             VStack(spacing: 0) {
-                if currentList == nil && !["trash", "completed"].contains(currentRoute) { quickAdd }
+                if let timeScope {
+                    Text(timeRangeDescription(timeScope)).font(.caption).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 20).padding(.vertical, 8)
+                } else if currentList == nil && !["trash", "completed"].contains(currentRoute) { quickAdd }
                 if selecting { HStack {
                     Button(selection.count == tasks.count ? "取消全选" : "全选") { selection = selection.count == tasks.count ? [] : Set(tasks.map(\.id)) }
                     Text("已选 \(selection.count) 项").foregroundStyle(.secondary); Spacer()
@@ -340,6 +360,12 @@ struct RootView: View {
                 else { taskList }
             }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).paperSurface()
         }
+    }
+    private func timeRangeDescription(_ scope: TaskTimeScope) -> String {
+        let range = scope.interval(now: queryDate)
+        let start = range.start.formatted(.dateTime.month().day())
+        if scope == .today { return start + " · 含逾期待办" }
+        return start + " – " + range.end.addingTimeInterval(-1).formatted(.dateTime.month().day())
     }
     private var quickAdd: some View {
         HStack {
@@ -356,7 +382,7 @@ struct RootView: View {
     }
     private var buckets: [(name: String, records: [Record])] {
         if grouping == "none" {
-            let heading = currentList == nil ? "\(outline.roots.count) 项任务 · \(tasks.count - tasks.filter { $0.parentID == nil }.count) 项子任务" : ""
+            let heading = currentList == nil && timeScope == nil ? "\(outline.roots.count) 项任务 · \(tasks.count - tasks.filter { $0.parentID == nil }.count) 项子任务" : ""
             return [(heading, outline.roots)]
         }
         let groups = Dictionary(grouping: outline.roots) { task -> String in
@@ -368,7 +394,10 @@ struct RootView: View {
     }
     private var taskList: some View {
         Group {
-            if tasks.isEmpty { ContentUnavailableView(search.isEmpty ? "这里还没有内容" : "没有匹配结果", systemImage: currentRoute == "notes" ? "note.text" : "tray", description: Text("添加内容，或切换专项查看。")) }
+            if tasks.isEmpty {
+                if timeScope != nil { ContentUnavailableView(search.isEmpty ? "这段时间没有待办" : "没有匹配结果", systemImage: "calendar") }
+                else { ContentUnavailableView(search.isEmpty ? "这里还没有内容" : "没有匹配结果", systemImage: currentRoute == "notes" ? "note.text" : "tray", description: Text("添加内容，或切换专项查看。")) }
+            }
             else {
                 List {
                     ForEach(buckets, id: \.name) { bucket in
@@ -446,6 +475,7 @@ struct RootView: View {
                 }.allowsHitTesting(false).accessibilityHidden(true)
             }
             .foregroundStyle(Color.ink).listRowBackground(Color.clear)
+            .opacity(timeScope != nil && !item.isMatch ? 0.55 : 1)
             .accessibilityElement(children: .contain)
             .accessibilityLabel("第 \(item.depth + 1) 层任务：\(task.title)")
             .contextMenu { taskMenu(task) }

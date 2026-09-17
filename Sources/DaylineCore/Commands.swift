@@ -80,7 +80,7 @@ public enum Commands {
             changes = records.map { Change(entity: $0.id, kind: $0.kind, fields: ["purged": .flag(true)]) }
         case "task.list":
             let filter = request.filter ?? TaskFilter()
-            guard ["all", "today", "tomorrow", "upcoming", "undated", "completed", "trash", "notes"].contains(filter.view) else { throw CommandError("invalid_view", "未知任务视图：\(filter.view)") }
+            guard TaskTimeScope(rawValue: filter.view) != nil || ["all", "tomorrow", "upcoming", "undated", "completed", "trash", "notes"].contains(filter.view) else { throw CommandError("invalid_view", "未知任务视图：\(filter.view)") }
             return result(p.query(filter, now: now, calendar: calendar))
         case "task.get": return result([try record()])
         case "list.list":

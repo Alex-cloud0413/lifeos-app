@@ -5,7 +5,7 @@ let help = """
 Life · OS — 本地任务与日历 CLI（JSON 输出）
 
 lifeos status
-lifeos tasks [--direction ID] [--project ID] [--view all|completed|trash] [--tag TAG] [--search TEXT]
+lifeos tasks [--direction ID] [--project ID] [--view all|today|next7days|month|quarter|completed|trash] [--tag TAG] [--search TEXT]
 lifeos get ID
 lifeos add "写周报" [--due "2026-09-14 09:00"] [--project ID] [--repeat weekly]
 lifeos update ID [--title TEXT] [--notes TEXT] [--due DATE|none] [--end DATE|none]

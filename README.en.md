@@ -12,6 +12,7 @@ People work in the app. Local agents use a CLI to inspect the same structure, cl
 
 - Projects within long-term areas; nested subtasks, sibling reordering, and subtree moves.
 - Rich-text notes with a full-screen editor, progress, status, tags, priorities, and optional dates.
+- Today, next 7 days, current month, and current quarter task views grouped by project; the home screen still starts with areas.
 - A local CLI with JSON output, idempotent requests, revision checks, batch actions, templates, and undo.
 - CloudKit private database sync using **your own** Apple developer configuration, with offline storage on each device.
 - Search, filters, boards, calendar views, notes, archives, trash, Mac quick capture, iOS sharing, and Shortcuts.
