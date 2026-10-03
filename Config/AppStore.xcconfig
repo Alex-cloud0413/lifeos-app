@@ -1,0 +1,5 @@
+// Pass with xcodebuild -xcconfig for App Store archives only.
+#include "Shared.xcconfig"
+
+LIFEOS_CLOUD_ENVIRONMENT = Production
+LIFEOS_PUSH_ENVIRONMENT = production

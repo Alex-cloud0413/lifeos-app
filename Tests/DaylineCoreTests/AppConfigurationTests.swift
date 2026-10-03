@@ -2,6 +2,11 @@ import XCTest
 @testable import DaylineCore
 
 final class AppConfigurationTests: XCTestCase {
+    func testProductionNeverReusesDevelopmentOrPreviewStore() {
+        XCTAssertEqual(AppConfiguration.storeFilename(cloudEnabled: true, environment: "Development"), "Cloud.store")
+        XCTAssertEqual(AppConfiguration.storeFilename(cloudEnabled: true, environment: "Production"), "Cloud-Production.store")
+        XCTAssertEqual(AppConfiguration.storeFilename(cloudEnabled: false, environment: "Production"), "Preview.store")
+    }
     func testUnexpandedSettingsDoNotBecomeContainerIdentifiers() {
         XCTAssertEqual(AppConfiguration.resolved("$(LIFEOS_CLOUD_CONTAINER)", fallback: "fallback"), "fallback")
         XCTAssertEqual(AppConfiguration.resolved("  ", fallback: "fallback"), "fallback")

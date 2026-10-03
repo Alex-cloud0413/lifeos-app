@@ -15,6 +15,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var exporting = false
     @State private var importing = false
+    @State private var showingPrivacy = false
+    @State private var confirmingAgent = false
     @State private var document = ArchiveDocument()
     @State private var message: String?
     var body: some View {
@@ -27,7 +29,7 @@ struct SettingsView: View {
                     if store.cloudEnabled {
                         Text("任务储存在你自己的 iCloud 私有数据库中。每台设备保留离线副本，联网后由系统同步。新安装的设备首次打开 App 后才开始接收数据。").font(.caption).foregroundStyle(.secondary)
                     } else {
-                        Text("这是本机预览版本，当前任务只在这台 Mac 上保存。签名后的 iCloud 版本使用独立任务库，可通过下方备份导入。").font(.caption).foregroundStyle(Color.ink)
+                        Text("这是本机预览版本，当前任务只在这台设备上保存。iCloud 版本使用独立任务库，可通过下方备份导入。").font(.caption).foregroundStyle(Color.ink)
                     }
                     Button("检查 iCloud 状态") { Task { await store.refreshCloudStatus() } }
                 }
@@ -35,8 +37,9 @@ struct SettingsView: View {
                 Section("快速添加") { Text(QuickCaptureController.shared.status); Button("打开快速添加") { QuickCaptureController.shared.show() } }
                 Section("本地 Agent") {
                     Text(store.agentStatus)
-                    HStack { Button("启用连接") { store.startAgent() }; Button("关闭连接") { store.stopAgent() } }
+                    HStack { Button("启用连接") { confirmingAgent = true }; Button("关闭连接") { store.stopAgent() } }
                     Text("本地 Agent 可读取和修改全部 Life · OS 任务。连接仅供这台 Mac 的当前用户使用；App 需保持运行，关闭窗口后仍可通过菜单栏使用。").font(.caption).foregroundStyle(.secondary)
+                    Text("你选择的 Agent 可能把读取的内容发送给它的 AI 服务。仅在信任该工具时启用连接。").font(.caption).foregroundStyle(.secondary)
                     Text("lifeos directions\nlifeos add \"写周报\"").font(.system(.caption, design: .monospaced)).textSelection(.enabled)
                 }
                 #endif
@@ -48,15 +51,17 @@ struct SettingsView: View {
                         catch { message = error.localizedDescription }
                     }
                     Button("合并导入备份…") { importing = true }
-                    Text("备份包含方向、专项、任务、筛选与操作记录。导入会合并并去重，不会清空现有资料。可以将备份保存在 iCloud 云盘。").font(.caption).foregroundStyle(.secondary)
+                    Text("备份包含方向、专项、任务、筛选与完整操作记录，可能包含已删除内容。导入会合并并去重，不会清空现有资料。可以将备份保存在 iCloud 云盘。").font(.caption).foregroundStyle(.secondary)
                 }
                 Section("外观") {
                     Toggle("轻柔纸纹", isOn: $paperTexture)
                     Text("开启增加对比度或减少透明度时，自动使用纯白背景。").font(.caption).foregroundStyle(.secondary)
                 }
                 Section {
-                    Text("Life · OS \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "") · 个人开发版本").font(.caption)
-                    Text("任务与日历，按自己的节奏安排。无广告、无自建账号服务器。").font(.caption).foregroundStyle(.secondary)
+                    Button("隐私与数据") { showingPrivacy = true }
+                    Link("支持与反馈", destination: ProductLinks.support)
+                    Text("Life · OS \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")").font(.caption)
+                    Text("免费使用 · 无广告 · 无内购").font(.caption).foregroundStyle(.secondary)
                 }
             }.formStyle(.grouped).paperSurface().navigationTitle("设置")
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } } }
@@ -68,6 +73,15 @@ struct SettingsView: View {
                     } catch { message = error.localizedDescription }
                 }
                 .alert("备份与恢复", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) { Button("好") { message = nil } } message: { Text(message ?? "") }
+                .sheet(isPresented: $showingPrivacy) { PrivacyView() }
+                #if os(macOS)
+                .alert("启用本地 Agent 连接？", isPresented: $confirmingAgent) {
+                    Button("取消", role: .cancel) { }
+                    Button("启用连接") { store.startAgent() }
+                } message: {
+                    Text("这台 Mac 当前用户下的本地程序将能读取和修改全部任务与备注。你选择的 Agent 可能把内容传给它的 AI 服务；可以随时在设置中关闭连接。")
+                }
+                #endif
         }.frame(idealWidth: 560, idealHeight: 680)
     }
 }

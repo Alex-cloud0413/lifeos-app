@@ -49,9 +49,15 @@ import UserNotifications
         let stored = UserDefaults.standard.string(forKey: "deviceActor") ?? UUID().uuidString
         actorID = stored; UserDefaults.standard.set(stored, forKey: "deviceActor")
         do {
-            let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("LifeOS", isDirectory: true)
+            var directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("LifeOS", isDirectory: true)
+            #if DAYLINE_LOCAL
+            // Isolate synthetic preview runs from any existing local preview content.
+            if let path = ProcessInfo.processInfo.environment["LIFEOS_PREVIEW_DATA_DIR"], !path.isEmpty {
+                directory = URL(fileURLWithPath: path, isDirectory: true)
+            }
+            #endif
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            let storeURL = directory.appendingPathComponent(cloudEnabled ? "Cloud.store" : "Preview.store")
+            let storeURL = directory.appendingPathComponent(AppConfiguration.storeFilename(cloudEnabled: cloudEnabled, environment: AppConfiguration.cloudEnvironment))
             let schema = Schema([SyncEvent.self])
             let config = ModelConfiguration("Dayline", schema: schema, url: storeURL, cloudKitDatabase: cloudEnabled ? .private(AppConfiguration.cloudContainer) : .none)
             container = try ModelContainer(for: schema, configurations: [config])
@@ -214,6 +220,7 @@ import UserNotifications
 
     func refreshCloudStatus() async {
         guard cloudEnabled else { return }
+        cloudDiagnostics = ""
         do {
             let status = try await CKContainer(identifier: AppConfiguration.cloudContainer).accountStatus()
             cloudAvailable = status == .available
@@ -223,25 +230,49 @@ import UserNotifications
                 do {
                     let zones = try await CKContainer(identifier: AppConfiguration.cloudContainer).privateCloudDatabase.allRecordZones()
                     cloudDiagnostics = "私有数据库可访问，\(zones.count) 个数据区"
-                } catch { cloudDiagnostics = Self.cloudErrorDescription(error) }
+                } catch {
+                    cloudAvailable = false
+                    cloudDiagnostics = Self.cloudErrorDescription(error)
+                    syncStatus = CloudSyncMessage.failure(error)
+                }
             case .noAccount: syncStatus = "尚未登录 iCloud · 修改暂存本机"
             case .restricted: syncStatus = "iCloud 访问受限 · 修改暂存本机"
             case .temporarilyUnavailable: syncStatus = "iCloud 暂不可用 · 修改暂存本机"
             default: syncStatus = "无法确认 iCloud 状态 · 修改暂存本机"
             }
-        } catch { cloudAvailable = false; syncStatus = "iCloud 连接失败：\(error.localizedDescription)" }
+        } catch {
+            cloudAvailable = false
+            cloudDiagnostics = Self.cloudErrorDescription(error)
+            syncStatus = CloudSyncMessage.failure(error)
+        }
     }
     private func observeCloud() {
+        guard cloudEnabled else { return }
+        observers.append(NotificationCenter.default.addObserver(forName: .CKAccountChanged, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.lastImport = nil; self.lastExport = nil
+                self.cloudDiagnostics = ""
+                await self.refreshCloudStatus()
+            }
+        })
         observers.append(NotificationCenter.default.addObserver(forName: NSPersistentCloudKitContainer.eventChangedNotification, object: nil, queue: .main) { [weak self] note in
             guard let event = note.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey] as? NSPersistentCloudKitContainer.Event else { return }
             Task { @MainActor in
                 guard let self else { return }
-                if let error = event.error { self.syncStatus = "同步遇到问题：\(Self.cloudErrorDescription(error))"; return }
+                if let error = event.error {
+                    self.cloudAvailable = false
+                    self.cloudDiagnostics = Self.cloudErrorDescription(error)
+                    self.syncStatus = CloudSyncMessage.failure(error)
+                    return
+                }
                 if event.endDate == nil { self.syncStatus = "正在同步 iCloud…"; return }
                 if event.succeeded {
+                    self.cloudAvailable = true
+                    self.cloudDiagnostics = ""
                     if event.type == .import { self.lastImport = event.endDate }
                     if event.type == .export { self.lastExport = event.endDate }
-                    self.syncStatus = "iCloud 最近一次同步成功"
+                    self.syncStatus = event.type == .setup ? "iCloud 已连接 · 等待同步" : "iCloud 最近一次同步成功"
                     if event.type == .import {
                         do { try self.reload() } catch { self.errorMessage = error.localizedDescription }
                     }

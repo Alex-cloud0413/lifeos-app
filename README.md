@@ -6,6 +6,8 @@
 
 [English](README.en.md) · [构建与 iCloud](docs/building.md) · [Agent 协作](docs/agent-workflow.md) · [CLI 接口](docs/cli.md) · [MIT](LICENSE)
 
+[隐私政策](docs/privacy.md) · [支持](docs/support.md) · [App Store 准备状态](docs/app-store.md)（尚未上架）
+
 Life · OS 是面向 macOS 和 iOS 的原生个人执行管理 App。它把长期关注的方向、阶段性专项和具体行动连接起来：先确定正在推进什么，再决定下一步做什么，日期按需安排。
 
 ```text

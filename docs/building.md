@@ -47,6 +47,10 @@ Mac 可执行 `zsh scripts/build.sh cloud`；iPhone 在 Xcode 选择设备运行
 
 CloudKit 的后台通知用于同步，不是任务提醒。应用没有日程到时提醒功能。
 
+App Store 候选版的独立构建脚本、Production 存储隔离与发布前验收见 [上架准备](app-store.md)。正式 archive 使用 `Config/AppStore.xcconfig`，不会改变日常开发构建的环境。当前准备中的 1.0.0 不表示已经发布到 App Store。
+
+自动化截图或人工预览时，可仅在 Preview 构建的进程环境设置 `LIFEOS_PREVIEW_DATA_DIR` 为新的本地目录，隔离合成示例；正式构建忽略此变量。
+
 ## CLI 连接自己的构建
 
 Preview 可直接运行 `./build/lifeos status`。开启 App 的本地 Agent 连接后，自定义签名版本请使用：
