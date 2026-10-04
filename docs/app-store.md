@@ -1,6 +1,6 @@
 # App Store 1.0 上架资料与发布流程
 
-状态：准备中，未提交审核。定价：免费（用户于 2026-10-03 确认）；无订阅、无内购、无广告。保留方向优先的默认首页和可选的 Mac 本地 Agent 接口。
+状态（2026-10-04）：iOS 1.0.0（build 16）等待审核；macOS build 16 因多余的入站网络权限被拒，修复后的 build 17 已上传，尚未重新提交审核。定价：免费（用户于 2026-10-03 确认）；无订阅、无内购、无广告。保留方向优先的默认首页和可选的 Mac 本地 Agent 接口。
 
 ## 商店文案草稿
 
@@ -34,6 +34,8 @@
 No app-specific account or sign-in is required. The app remains usable locally without iCloud. To test sync, sign into the same Apple Account in system settings on two devices, enable iCloud for the app, then create a direction, project and task. CloudKit uses only the current user's private database; there is no developer task backend or public task database.
 
 The optional Mac local Agent interface is off by default and requires explicit user activation in Settings. It uses a local Unix-domain socket restricted to the current operating-system user. It accepts validated task commands; it does not download or execute code, install helpers, launch on login or require an AI provider. The separately built open-source CLI is optional, not necessary for the app's task-management features. Background remote notifications are used only for iCloud synchronization; there are no scheduled task reminders.
+
+macOS build 17 removes the unused `com.apple.security.network.server` entitlement. The optional local Agent interface uses an AF_UNIX socket inside the app's sandbox container; it does not listen on TCP or UDP ports. Outgoing network access remains enabled for the user's private iCloud synchronization.
 
 Privacy policy is available offline in Settings → 隐私与数据 and at the public URL above. The app is free, without purchases, subscriptions, ads or analytics SDKs. Screenshots must contain synthetic examples only.
 

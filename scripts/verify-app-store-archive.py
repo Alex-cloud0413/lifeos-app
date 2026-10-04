@@ -34,6 +34,10 @@ if not unsigned:
     subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], check=True)
     result = subprocess.run(["codesign", "-d", "--entitlements", ":-", str(app)], capture_output=True, check=True)
     entitlements = plistlib.loads(result.stdout)
+    if platform == "macos":
+        assert entitlements.get("com.apple.security.app-sandbox") is True, "Mac App Sandbox is required"
+        assert entitlements.get("com.apple.security.network.client") is True, "iCloud requires outgoing connections"
+        assert not entitlements.get("com.apple.security.network.server", False), "Local Agent IPC does not require an incoming network entitlement"
     assert entitlements["com.apple.developer.icloud-container-environment"] == "Production"
     assert info["LifeOSCloudContainer"] in entitlements["com.apple.developer.icloud-container-identifiers"]
     aps_key = "com.apple.developer.aps-environment" if platform == "macos" else "aps-environment"

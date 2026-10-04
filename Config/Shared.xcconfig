@@ -7,7 +7,7 @@ LIFEOS_URL_SCHEME = lifeos
 LIFEOS_CLOUD_ENVIRONMENT = Development
 LIFEOS_PUSH_ENVIRONMENT = development
 LIFEOS_VERSION = 1.0.0
-LIFEOS_BUILD = 16
+LIFEOS_BUILD = 17
 
 #include? "Local.xcconfig"
 
