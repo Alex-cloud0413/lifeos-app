@@ -1,5 +1,7 @@
 # Life · OS
 
+**Maintenance status (2026-11-08): active development is paused.** The source remains available under MIT. See [resuming development](docs/resuming-development.md) to restore a checkout.
+
 **Project-centered execution, with local agents helping organize and move work forward.**
 
 [中文](README.md) · [Build and iCloud setup](docs/building.md) · [Agent workflow](docs/agent-workflow.md) · [CLI reference](docs/cli.md)

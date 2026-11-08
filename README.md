@@ -6,7 +6,9 @@
 
 [English](README.en.md) · [构建与 iCloud](docs/building.md) · [Agent 协作](docs/agent-workflow.md) · [CLI 接口](docs/cli.md) · [MIT](LICENSE)
 
-[隐私政策](docs/privacy.md) · [支持](docs/support.md) · [App Store 准备状态](docs/app-store.md)（尚未上架）
+[隐私政策](docs/privacy.md) · [支持](docs/support.md) · [App Store 记录](docs/app-store.md) · [恢复开发](docs/resuming-development.md)
+
+**维护状态（2026-11-08）：暂停主动开发。** 源码继续以 MIT 许可证开放；后续是否恢复开发与发行另行决定。
 
 Life · OS 是面向 macOS 和 iOS 的原生个人执行管理 App。它把长期关注的方向、阶段性专项和具体行动连接起来：先确定正在推进什么，再决定下一步做什么，日期按需安排。
 
